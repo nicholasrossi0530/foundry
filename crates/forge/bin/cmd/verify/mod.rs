@@ -156,7 +156,11 @@ impl VerifyArgs {
         let config = self.load_config_emit_warnings();
         let chain = config.chain.unwrap_or_default();
         self.etherscan.chain = Some(chain);
-        self.etherscan.key = config.get_etherscan_config_with_chain(Some(chain))?.map(|c| c.key);
+
+        let etherscan_config = config.get_etherscan_config_with_chain(Some(chain))?;
+
+        self.etherscan.key = etherscan_config.map(|c| c.key);
+        self.etherscan.url = etherscan_config.map(|c| c.url);
 
         if self.show_standard_json_input {
             let args =
@@ -165,7 +169,7 @@ impl VerifyArgs {
             return Ok(())
         }
 
-        let verifier_url = self.verifier.verifier_url.clone();
+        let verifier_url = self.verifier.verifier_url.clone().or_else(|| self.etherscan.url.clone());
         println!("Start verifying contract `{}` deployed on {chain}", self.address);
         self.verifier.verifier.client(&self.etherscan.key())?.verify(self).await.map_err(|err| {
             if let Some(verifier_url) = verifier_url {
